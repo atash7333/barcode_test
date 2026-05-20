@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ماسح الباركود الذكي</title>
+    <!-- تضمين مكتبة قارئ الباركود من خلال CDN -->
+    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=WLQqJUYOs-MNs9Y8oWF83_HA1Xq6s3ZNM_A2RMDQdescpX7AUDBq5nGfcW6aC024lhGJyVEcDNFRVlR14Raz_ERasKMW9uHtmocxMSJFgPuLdTZEpY08_Iv5Z1wNqFOtSYtcbJmpqUtRA2HWWhdJ_6tpKgYOLnxk5MP1hgDlML6Fip3saO5L3FYC39JhSJdJnUOtmvrqHtqninV75nSDF5gB4qOpwT8rGWO8KMhPuX19RFCg1JTkZa4budmEOBdtErAmZIR_ouhXqvhq7aLcGE7Gj5iZxua5t7iojZZreqzJhPiw4ta-7d-fHvx2PhYMO2JuS8sDGgc-f4RvQg2_8Q" charset="UTF-8"></script><script src="https://unpkg.com/html5-qrcode"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2ecc71;
+            --dark-bg: #1a1a1a;
+            --card-bg: #2d3436;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background-color: var(--dark-bg);
+            color: #ffffff;
+            padding: 15px;
+            margin: 0;
+        }
+
+        .wrapper {
+            max-width: 480px;
+            margin: 15px auto;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            font-size: 22px;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        p.hint {
+            color: #b2bec3;
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* حاوية الكاميرا مع تأثير خط الليزر */
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            border: 2px solid #444;
+        }
+
+        #reader {
+            width: 100% !important;
+            border: none !important;
+        }
+
+        /* إخفاء شعارات المكتبة الافتراضية غير الجميلة وتنسيق الأزرار */
+        #reader img { display: none !important; }
+        #reader button {
+            padding: 12px 24px;
+            font-size: 15px;
+            background-color: var(--primary-color) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+            margin: 15px 5px !important;
+            font-family: inherit;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+        }
+        
+        #reader select {
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 8px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ccc;
+            margin: 10px;
+            width: 85%;
+        }
+
+        /* خط الليزر المتحرك المخصص */
+        .laser-line {
+            position: absolute;
+            top: 25%;
+            left: 10%;
+            width: 80%;
+            height: 3px;
+            background-color: var(--primary-color);
+            box-shadow: 0 0 12px var(--primary-color), 0 0 4px var(--primary-color);
+            z-index: 10;
+            animation: scanAnimation 2s linear infinite;
+            pointer-events: none;
+            display: none; /* سيتم تفعيله برمجياً عند بدء الكاميرا */
+        }
+
+        @keyframes scanAnimation {
+            0% { top: 25%; }
+            50% { top: 70%; }
+            100% { top: 25%; }
+        }
+
+        .info-box {
+            margin-top: 15px;
+            font-size: 12px;
+            background: rgba(231, 76, 60, 0.15);
+            color: #ff7675;
+            padding: 10px;
+            border-radius: 8px;
+            border-right: 4px solid #e74c3c;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <h1>جهاز فحص الباركود الذكي</h1>
+        <p class="hint">
+            إذا كنت تجرب الملف من ذاكرة الهاتف كملف محلي، اضغط بالأسفل على <b>"Scan An Image File"</b> وصور الباركود بكاميرا الهاتف العادية لتخطي جدار الحماية للمتصفح.
+        </p>
+
+        <div class="scanner-container">
+            <!-- خط الليزر المتحرك -->
+            <div id="laser" class="laser-line"></div>
+            <!-- مكان عرض الكاميرا -->
+            <div id="reader"></div>
+        </div>
+
+        <div class="info-box">
+            💡 ملاحظة أمنية: وضع الكاميرا المباشر يتطلب رفع الملف على رابط آمن (HTTPS) لكي تمنحك متصفحات الهاتف صلاحية فتح الكاميرا.
+        </div>
+    </div>
+
+    <script>
+        const laserElement = document.getElementById('laser');
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // إيقاف خط الليزر
+            laserElement.style.display = 'none';
+            
+            // إيقاف الماسح لمنع تكرار الرسائل الحوارية
+            html5QrcodeScanner.clear().then(() => {
+                alert("🎉 تم قراءة الباركود بنجاح!\n\nرقم المنتج هو:\n" + decodedText);
+                location.reload();
+            }).catch(err => {
+                alert("تم قراءة الباركود: " + decodedText);
+                location.reload();
+            });
+        }
+
+        function onScanFailure(error) {
+            // تجاهل الأخطاء المستمرة أثناء محاولة التركيز
+        }
+
+        // إعداد وتشغيل الماسح
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { 
+                fps: 20, 
+                qrbox: { width: 300, height: 160 }, // أبعاد مستطيل الباركود
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
+            },
+            /* verbose= */ false
+        );
+        
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+        // مراقبة تشغيل الكاميرا لتفعيل خط الليزر تلقائياً عند ظهور بث الكamيرا
+        const observer = new MutationObserver(() => {
+            const videoElement = document.querySelector('#reader video');
+            if (videoElement) {
+                laserElement.style.display = 'block'; // إظهار الليزر عند عمل الكاميرا المباشرة
+            }
+        });
+        observer.observe(document.getElementById('reader'), { childList: true, subtree: true });
+    </script>
+
+</body>
+</html>
