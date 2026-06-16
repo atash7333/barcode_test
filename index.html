@@ -3,188 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ماسح الباركود الذكي</title>
-    <!-- تضمين مكتبة قارئ الباركود من خلال CDN -->
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=WLQqJUYOs-MNs9Y8oWF83_HA1Xq6s3ZNM_A2RMDQdescpX7AUDBq5nGfcW6aC024lhGJyVEcDNFRVlR14Raz_ERasKMW9uHtmocxMSJFgPuLdTZEpY08_Iv5Z1wNqFOtSYtcbJmpqUtRA2HWWhdJ_6tpKgYOLnxk5MP1hgDlML6Fip3saO5L3FYC39JhSJdJnUOtmvrqHtqninV75nSDF5gB4qOpwT8rGWO8KMhPuX19RFCg1JTkZa4budmEOBdtErAmZIR_ouhXqvhq7aLcGE7Gj5iZxua5t7iojZZreqzJhPiw4ta-7d-fHvx2PhYMO2JuS8sDGgc-f4RvQg2_8Q" charset="UTF-8"></script><script src="https://unpkg.com/html5-qrcode"></script>
+    <title>توقع الفائز - الفلتر الكامل مع الإطار الرياضي</title>
     
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
     <style>
-        :root {
-            --primary-color: #2ecc71;
-            --dark-bg: #1a1a1a;
-            --card-bg: #2d3436;
-        }
-        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: white;
             text-align: center;
-            background-color: var(--dark-bg);
-            color: #ffffff;
-            padding: 15px;
             margin: 0;
-        }
-
-        .wrapper {
-            max-width: 480px;
-            margin: 15px auto;
-            background: var(--card-bg);
             padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
-
-        h1 {
-            font-size: 22px;
-            margin-bottom: 5px;
-            color: var(--primary-color);
+        .container { max-width: 600px; margin: auto; }
+        h1 { color: #f39c12; }
+        
+        /* واجهة الاختيار */
+        #voting-screen { margin-top: 50px; }
+        .teams-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
         }
-
-        p.hint {
-            color: #b2bec3;
-            font-size: 13px;
-            margin-bottom: 20px;
-            line-height: 1.5;
+        .team-box {
+            cursor: pointer;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 15px;
+            background: #1e1e1e;
+            transition: 0.3s;
+            width: 40%;
+            opacity: 0.6;
+            pointer-events: none;
         }
-
-        /* حاوية الكاميرا مع تأثير خط الليزر */
-        .scanner-container {
+        .team-box.ready {
+            opacity: 1;
+            pointer-events: auto;
+            border-color: #2ecc71;
+        }
+        .team-box.ready:hover {
+            border-color: #f39c12;
+            transform: scale(1.05);
+        }
+        .flag-icon { font-size: 50px; display: block; margin-bottom: 10px; }
+        #loading-msg { color: #f1c40f; font-size: 16px; margin-bottom: 10px; }
+        
+        /* واجهة الكاميرا والمعاينة الحية */
+        #camera-screen { display: none; position: relative; margin-top: 20px; }
+        .video-container {
             position: relative;
             width: 100%;
-            border-radius: 12px;
+            max-width: 500px;
+            margin: auto;
+            border-radius: 15px;
             overflow: hidden;
-            background: #000;
-            border: 2px solid #444;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
-        #reader {
-            width: 100% !important;
-            border: none !important;
-        }
-
-        /* إخفاء شعارات المكتبة الافتراضية غير الجميلة وتنسيق الأزرار */
-        #reader img { display: none !important; }
-        #reader button {
-            padding: 12px 24px;
-            font-size: 15px;
-            background-color: var(--primary-color) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 8px !important;
-            cursor: pointer;
-            margin: 15px 5px !important;
-            font-family: inherit;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
-        }
+        #webcam { display: none; } 
+        #output_canvas { width: 100%; height: auto; display: block; transform: scaleX(-1); }
         
-        #reader select {
-            padding: 10px;
-            font-size: 14px;
-            border-radius: 8px;
-            background: #fff;
-            color: #333;
-            border: 1px solid #ccc;
-            margin: 10px;
-            width: 85%;
+        .btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
         }
-
-        /* خط الليزر المتحرك المخصص */
-        .laser-line {
-            position: absolute;
-            top: 25%;
-            left: 10%;
-            width: 80%;
-            height: 3px;
-            background-color: var(--primary-color);
-            box-shadow: 0 0 12px var(--primary-color), 0 0 4px var(--primary-color);
-            z-index: 10;
-            animation: scanAnimation 2s linear infinite;
-            pointer-events: none;
-            display: none; /* سيتم تفعيله برمجياً عند بدء الكاميرا */
-        }
-
-        @keyframes scanAnimation {
-            0% { top: 25%; }
-            50% { top: 70%; }
-            100% { top: 25%; }
-        }
-
-        .info-box {
-            margin-top: 15px;
-            font-size: 12px;
-            background: rgba(231, 76, 60, 0.15);
-            color: #ff7675;
-            padding: 10px;
-            border-radius: 8px;
-            border-right: 4px solid #e74c3c;
-            text-align: right;
-        }
+        .btn:hover { background-color: #c0392b; }
+        
+        /* شاشة عرض الصورة بعد الالتقاط */
+        #snapshot-screen { display: none; margin-top: 20px; }
+        #captured-image { max-width: 100%; border-radius: 15px; border: 3px solid #fff; }
     </style>
 </head>
 <body>
 
-    <div class="wrapper">
-        <h1>جهاز فحص الباركود الذكي</h1>
-        <p class="hint">
-            إذا كنت تجرب الملف من ذاكرة الهاتف كملف محلي، اضغط بالأسفل على <b>"Scan An Image File"</b> وصور الباركود بكاميرا الهاتف العادية لتخطي جدار الحماية للمتصفح.
-        </p>
-
-        <div class="scanner-container">
-            <!-- خط الليزر المتحرك -->
-            <div id="laser" class="laser-line"></div>
-            <!-- مكان عرض الكاميرا -->
-            <div id="reader"></div>
+    <div class="container">
+        <div id="voting-screen">
+            <h1>من تتوقع الفائز في المباراة القادمة؟</h1>
+            <div id="loading-msg">جاري تجهيز النظام الحركي والإطارات... ⏳</div>
+            <p>اختر فريقك لتفعيل طلاء الوجه، العزل، والإطار الرسمي الموحد!</p>
+            
+            <div class="teams-container">
+                <div class="team-box" id="btn-brazil" onclick="startFilter('brazil')">
+                    <span class="flag-icon">🇧🇷</span>
+                    <h3>البرازيل</h3>
+                </div>
+                <div class="team-box" id="btn-argentina" onclick="startFilter('argentina')">
+                    <span class="flag-icon">🇦🇷</span>
+                    <h3>الأرجنتين</h3>
+                </div>
+            </div>
         </div>
 
-        <div class="info-box">
-            💡 ملاحظة أمنية: وضع الكاميرا المباشر يتطلب رفع الملف على رابط آمن (HTTPS) لكي تمنحك متصفحات الهاتف صلاحية فتح الكاميرا.
+        <div id="camera-screen">
+            <h2 id="filter-title">جاري التصميم...</h2>
+            <div class="video-container">
+                <video id="webcam" autoplay playsinline muted></video>
+                <canvas id="output_canvas"></canvas>
+            </div>
+            <button class="btn" onclick="takeSnapshot()">التقط لقطة للشاشة 📸</button>
+        </div>
+
+        <div id="snapshot-screen">
+            <h2>صورتك الرسمية للتوقع!</h2>
+            <div style="max-width: 500px; margin: auto;">
+                <img id="captured-image" src="" alt="Snapshot">
+            </div>
+            <br>
+            <button class="btn" style="background-color: #2ecc71;" onclick="location.reload()">جرّب مرة أخرى 🔄</button>
         </div>
     </div>
 
     <script>
-        const laserElement = document.getElementById('laser');
-
-        function onScanSuccess(decodedText, decodedResult) {
-            // إيقاف خط الليزر
-            laserElement.style.display = 'none';
-            
-            // إيقاف الماسح لمنع تكرار الرسائل الحوارية
-            html5QrcodeScanner.clear().then(() => {
-                alert("🎉 تم قراءة الباركود بنجاح!\n\nرقم المنتج هو:\n" + decodedText);
-                location.reload();
-            }).catch(err => {
-                alert("تم قراءة الباركود: " + decodedText);
-                location.reload();
-            });
-        }
-
-        function onScanFailure(error) {
-            // تجاهل الأخطاء المستمرة أثناء محاولة التركيز
-        }
-
-        // إعداد وتشغيل الماسح
-        let html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { 
-                fps: 20, 
-                qrbox: { width: 300, height: 160 }, // أبعاد مستطيل الباركود
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
-                }
-            },
-            /* verbose= */ false
-        );
+        const votingScreen = document.getElementById('voting-screen');
+        const cameraScreen = document.getElementById('camera-screen');
+        const snapshotScreen = document.getElementById('snapshot-screen');
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
         
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        let selectedTeam = '';
+        let faceMesh;
+        let selfieSegmentation;
+        let camera;
+        
+        let latestFaceResults = null;
+        let latestSegmentationResults = null;
 
-        // مراقبة تشغيل الكاميرا لتفعيل خط الليزر تلقائياً عند ظهور بث الكamيرا
-        const observer = new MutationObserver(() => {
-            const videoElement = document.querySelector('#reader video');
-            if (videoElement) {
-                laserElement.style.display = 'block'; // إظهار الليزر عند عمل الكاميرا المباشرة
+        const teamColors = {
+            brazil: 'rgba(255, 0, 0, 0.45)',    
+            argentina: 'rgba(0, 50, 255, 0.45)' 
+        };
+
+        window.onload = function() {
+            preloadModels();
+        };
+
+        // التحميل المسبق في الخلفية لمنع التجميد والبطء
+        async function preloadModels() {
+            selfieSegmentation = new SelfieSegmentation({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+            });
+            selfieSegmentation.setOptions({ modelSelection: 1 });
+            selfieSegmentation.onResults(onSegmentationResults);
+
+            faceMesh = new FaceMesh({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+            });
+            faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            faceMesh.onResults(onFaceResults);
+
+            await selfieSegmentation.initialize();
+            await faceMesh.initialize();
+
+            document.getElementById('loading-msg').innerText = "الذكاء الاصطناعي والإطارات جاهزة! اضغط للاختيار ⚡";
+            document.getElementById('loading-msg').style.color = "#2ecc71";
+            document.getElementById('btn-brazil').classList.add('ready');
+            document.getElementById('btn-argentina').classList.add('ready');
+        }
+
+        function startFilter(team) {
+            selectedTeam = team;
+            votingScreen.style.display = 'none';
+            cameraScreen.style.display = 'block';
+            document.getElementById('filter-title').innerText = `بث مشجعي ${team === 'brazil' ? 'البرازيل 🔴' : 'الأرجنتين 🔵'}`;
+            
+            camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await selfieSegmentation.send({ image: videoElement });
+                    await faceMesh.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480
+            });
+            camera.start();
+        }
+
+        function onSegmentationResults(results) {
+            latestSegmentationResults = results;
+            renderCombinedFrame();
+        }
+
+        function onFaceResults(results) {
+            latestFaceResults = results;
+            renderCombinedFrame();
+        }
+
+        // دالة الدمج والرسم الشاملة (الخلفية الرمادية + طلاء الوجه + الإطار الثابت)
+        function renderCombinedFrame() {
+            if (!latestSegmentationResults) return;
+            const w = videoElement.videoWidth;
+            const h = videoElement.videoHeight;
+            if (w === 0 || h === 0) return;
+
+            canvasElement.width = w;
+            canvasElement.height = h;
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, w, h);
+
+            // 1. رسم عزل الخلفية بالرمادي
+            canvasCtx.drawImage(latestSegmentationResults.segmentationMask, 0, 0, w, h);
+            canvasCtx.globalCompositeOperation = 'source-in';
+            canvasCtx.drawImage(latestSegmentationResults.image, 0, 0, w, h);
+            canvasCtx.globalCompositeOperation = 'destination-over';
+            canvasCtx.fillStyle = '#888888'; 
+            canvasCtx.fillRect(0, 0, w, h);
+            canvasCtx.globalCompositeOperation = 'source-over';
+
+            // 2. رسم طلاء الوجه والـ الأعلام على الخدود
+            if (latestFaceResults && latestFaceResults.multiFaceLandmarks && latestFaceResults.multiFaceLandmarks.length > 0) {
+                drawFaceMask(canvasCtx, latestFaceResults.multiFaceLandmarks[0], w, h);
             }
-        });
-        observer.observe(document.getElementById('reader'), { childList: true, subtree: true });
-    </script>
 
+            // 3. رسم الإطار الثابت ثنائي الأبعاد (2D Frame) حول حواف الصورة
+            drawPictureFrame(canvasCtx, w, h);
+
+            canvasCtx.restore();
+        }
+
+        function drawFaceMask(canvasCtx, landmarks, width, height) {
+            canvasCtx.fillStyle = teamColors[selectedTeam];
+            canvasCtx.beginPath();
+            const faceOutlineIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+            faceOutlineIndices.forEach((index, i) => {
+                const x = landmarks[index].x * width;
+                const y = landmarks[index].y * height;
+                if (i === 0) canvasCtx.moveTo(x, y);
+                else canvasCtx.lineTo(x, y);
+            });
+            canvasCtx.closePath();
+            canvasCtx.fill();
+
+            const rightCheek = landmarks[234];
+            const leftCheek = landmarks[454];
+            canvasCtx.font = `${Math.round(width * 0.05)}px Arial`;
+            canvasCtx.fillText(selectedTeam === 'brazil' ? "🇧🇷" : "🇦🇷", rightCheek.x * width, rightCheek.y * height);
+            canvasCtx.fillText(selectedTeam === 'brazil' ? "🇧🇷" : "🇦🇷", leftCheek.x * width, leftCheek.y * height);
+        }
+
+        // دالة رسم الإطار ثنائي الأبعاد المستوحى من هوية الدول الرياضية
+        function drawPictureFrame(ctx, width, height) {
+            const thickness = Math.round(width * 0.035); // سمك الإطار متناسق مع حجم الشاشة تلقائياً
+            
+            // اختيار لون خطوط الإطار الأساسية بناءً على اختيار الفريق
+            ctx.lineWidth = thickness;
+            ctx.strokeStyle = selectedTeam === 'brazil' ? '#f1c40f' : '#75aadb'; // أصفر للبرازيل، أزرق أرجنتيني للأرجنتين
+            ctx.strokeRect(thickness / 2, thickness / 2, width - thickness, height - thickness);
+
+            // إضافة خط إضافي جمالي داخلي رفيع بلون أبيض
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeRect(thickness, thickness, width - (thickness * 2), height - (thickness * 2));
+
+            // طباعة زخارف أو أعلام على زوايا الإطار الثابت الأربعة لمنحه طابع البوستر الرياضي الرسمي
+            ctx.font = `${thickness * 0.8}px Arial`;
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'center';
+            const flag = selectedTeam === 'brazil' ? "🇧🇷" : "🇦🇷";
+            
+            // الزاوية العليا يسار
+            ctx.fillText(flag, thickness, thickness);
+            // الزاوية العليا يمين
+            ctx.fillText(flag, width - thickness, thickness);
+            // الزاوية السفلى يسار
+            ctx.fillText(flag, thickness, height - thickness);
+            // الزاوية السفلى يمين
+            ctx.fillText(flag, width - thickness, height - thickness);
+
+            // كتابة نص البوستر التفاعلي في أسفل المنتصف للإطار
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${thickness * 0.5}px Segoe UI`;
+            ctx.fillText(selectedTeam === 'brazil' ? "VAI BRASIL!" : "VAMOS ARGENTINA!", width / 2, height - (thickness / 2));
+        }
+
+        // دالة التقاط اللقطة المدمجة بشكل سليم وبدون اهتزاز أو انحراف للإطار أو الوجه
+        function takeSnapshot() {
+            if (!latestSegmentationResults) return;
+            
+            const mergeCanvas = document.createElement('canvas');
+            const w = videoElement.videoWidth;
+            const h = videoElement.videoHeight;
+            mergeCanvas.width = w;
+            mergeCanvas.height = h;
+            const mergeCtx = mergeCanvas.getContext('2d');
+
+            // قلب الصورة بالكامل أفقياً لإعطاء تأثير المرآة المتناسق والنهائي بدقة
+            mergeCtx.translate(w, 0);
+            mergeCtx.scale(-1, 1);
+            mergeCtx.drawImage(canvasElement, 0, 0, w, h);
+
+            const dataUrl = mergeCanvas.toDataURL('image/png');
+            document.getElementById('captured-image').src = dataUrl;
+
+            if(camera) { camera.stop(); }
+            cameraScreen.style.display = 'none';
+            snapshotScreen.style.display = 'block';
+        }
+    </script>
 </body>
 </html>
